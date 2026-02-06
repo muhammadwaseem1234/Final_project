@@ -1,0 +1,30 @@
+{
+    "name":  "auth-chain-id",
+    "version":  "1.0.0",
+    "description":  "Blockchain-Backed IoT Authentication with ZKP \u0026 Anomaly Detection",
+    "private":  true,
+    "workspaces":  [
+                       "gateway",
+                       "auth-service",
+                       "web-ui"
+                   ],
+    "scripts":  {
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
+                    "zkp:setup": "powershell -ExecutionPolicy Bypass -File .\\zkp\\scripts\\setup.ps1",
+                    "zkp:setup:unix": "bash ./zkp/scripts/setup.sh",
+                    "test:e2e": "node tests/e2e.test.js",
+                    "start:all": "node scripts/start-all.js"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "devDependencies":  {
+                            "@nomicfoundation/hardhat-ethers": "^4.0.0",
+                            "circomlib": "^2.0.5",
+                            "circomlibjs":  "^0.1.7",
+                            "hardhat":  "^3.1.6",
+                            "snarkjs":  "^0.7.2"
+                        }
+}

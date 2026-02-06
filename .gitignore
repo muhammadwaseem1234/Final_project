@@ -1,0 +1,30 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / React
+web-ui/dist/
+web-ui/.vite/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment
+.env
+
+# ZKP artifacts
+zkp/artifacts/
+
+# SQLite
+auth-service/data/
+*.db
+
+# OS
+.DS_Store
+Thumbs.db

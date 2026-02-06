@@ -1,0 +1,35 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-c27ade13529a67a4441a38a389dcb14c4b4391d1",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/DeviceRegistry.sol": "project/contracts/DeviceRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/DeviceRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.0;\r\n\r\ncontract DeviceRegistry {\r\n    enum Status { REGISTERED, ACTIVE, REVOKED }\r\n\r\n    struct Device {\r\n        bytes32 idHash;\r\n        uint256 pubKeyHash; // Simplified for ZK commitment or public key hash\r\n        Status status;\r\n        uint256 registeredAt;\r\n        uint256 lastSeen;\r\n        uint256 reputation;\r\n    }\r\n\r\n    mapping(bytes32 => Device) public devices;\r\n    \r\n    event DeviceRegistered(bytes32 indexed idHash, uint256 pubKeyHash);\r\n    event DeviceStatusUpdated(bytes32 indexed idHash, Status status);\r\n    event AuthAttempt(bytes32 indexed idHash, bool success, string reason);\r\n\r\n    modifier onlyActive(bytes32 _idHash) {\r\n        require(devices[_idHash].status == Status.ACTIVE, \"Device not active\");\r\n        _;\r\n    }\r\n\r\n    function registerDevice(bytes32 _idHash, uint256 _pubKeyHash) external {\r\n        require(devices[_idHash].registeredAt == 0, \"Device already registered\");\r\n        \r\n        devices[_idHash] = Device({\r\n            idHash: _idHash,\r\n            pubKeyHash: _pubKeyHash,\r\n            status: Status.ACTIVE,\r\n            registeredAt: block.timestamp,\r\n            lastSeen: block.timestamp,\r\n            reputation: 100\r\n        });\r\n\r\n        emit DeviceRegistered(_idHash, _pubKeyHash);\r\n    }\r\n\r\n    function updateStatus(bytes32 _idHash, Status _status) external {\r\n        // In a real system, this would be restricted to onlyOwner or a Governance contract\r\n        require(devices[_idHash].registeredAt != 0, \"Device not found\");\r\n        devices[_idHash].status = _status;\r\n        emit DeviceStatusUpdated(_idHash, _status);\r\n    }\r\n\r\n    function logAuth(bytes32 _idHash, bool _success, string calldata _reason) external {\r\n        // Called by Auth Oracle / Service\r\n        // Verify this call comes from a trusted relayer in prod\r\n        if(_success) {\r\n            devices[_idHash].lastSeen = block.timestamp;\r\n            if(devices[_idHash].reputation < 100) {\r\n                devices[_idHash].reputation++;\r\n            }\r\n        } else {\r\n             if(devices[_idHash].reputation > 0) {\r\n                devices[_idHash].reputation--;\r\n            }\r\n        }\r\n        emit AuthAttempt(_idHash, _success, _reason);\r\n    }\r\n    \r\n    function getDevice(bytes32 _idHash) external view returns (Device memory) {\r\n        return devices[_idHash];\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
