@@ -50,7 +50,9 @@ class IoTDevice:
         try:
             res = requests.post(f"{GATEWAY_URL}/auth", json=payload)
             if res.status_code == 200:
-                print(f"[{self.device_id}] Auth Success: {res.json()}")
+                response_data = res.json()
+                self.token = response_data.get("token")
+                print(f"[{self.device_id}] Auth Success: {response_data}")
             else:
                 print(f"[{self.device_id}] Auth Failed: {res.text}")
         except Exception as e:
@@ -67,7 +69,11 @@ class IoTDevice:
             "metricValue": 12.5
         }
         try:
-            res = requests.post(f"{GATEWAY_URL}/telemetry", json=data)
+            if not self.token:
+                print(f"[{self.device_id}] Missing token, skipping telemetry")
+                return
+            headers = {"Authorization": f"Bearer {self.token}"}
+            res = requests.post(f"{GATEWAY_URL}/telemetry", json=data, headers=headers)
             print(f"[{self.device_id}] Telemetry Sent: {res.json()}")
         except Exception as e:
              print(f"Telemetry Error: {e}")

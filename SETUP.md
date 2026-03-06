@@ -38,6 +38,17 @@ pip install -r device-sim/requirements.txt
 npm run zkp:setup
 ```
 
+## JWT config (real bearer tokens)
+
+Set these once in your shell before starting services:
+
+```powershell
+$env:JWT_SECRET="replace_with_a_long_random_secret"
+$env:JWT_ISSUER="authchainid-auth-service"
+$env:JWT_AUDIENCE="authchainid-gateway"
+$env:JWT_EXPIRES_IN="15m"
+```
+
 ## Run everything (one command)
 
 ```powershell
@@ -84,6 +95,7 @@ python behavior-service/main.py
 cd C:\Users\Dell\AuthChainID
 node gateway/index.js
 ```
+`/telemetry` now requires a bearer token from `/auth`.
 
 ### 6) Start web UI
 

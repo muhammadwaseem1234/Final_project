@@ -151,9 +151,15 @@ function App() {
     setLoading((prev) => ({ ...prev, telemetry: true }))
     const payloadSize = payloadSizeOverride ?? Number(forms.payloadSize)
     try {
+      if (!token) {
+        throw new Error('Authenticate first to get a bearer token')
+      }
       const res = await fetch(`${config.gatewayUrl}/telemetry`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({
           deviceId: forms.deviceId,
           payloadSize,

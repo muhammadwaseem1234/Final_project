@@ -25,6 +25,17 @@ npm install
 npm run zkp:setup
 ```
 
+## JWT Config
+
+Use the same JWT settings for both `auth-service` and `gateway`:
+
+```powershell
+$env:JWT_SECRET="replace_with_a_long_random_secret"
+$env:JWT_ISSUER="authchainid-auth-service"
+$env:JWT_AUDIENCE="authchainid-gateway"
+$env:JWT_EXPIRES_IN="15m"
+```
+
 ## Run locally
 
 1. Start Hardhat node (separate terminal):
@@ -54,6 +65,7 @@ python behavior-service/main.py
 ```powershell
 node gateway/index.js
 ```
+Telemetry requests to `/telemetry` now require `Authorization: Bearer <token>` where token comes from `/auth`.
 
 4. Start the UI:
 ```powershell
@@ -73,3 +85,15 @@ This will:
 - Deploy `DeviceRegistry`
 - Launch auth, behavior, and gateway services
 - Run registration, proof-based auth, telemetry, and revocation checks
+
+npm install
+cd web-ui; npm install; cd ..
+pip install -r behavior-service/requirements.txt
+
+npm run start:all
+
+$ports = 8545,3000,3001,8000,5173
+Get-NetTCPConnection -State Listen |
+  Where-Object { $ports -contains $_.LocalPort } |
+  Select-Object -ExpandProperty OwningProcess -Unique |
+  ForEach-Object { Stop-Process -Id $_ -Force }

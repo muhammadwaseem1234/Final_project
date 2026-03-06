@@ -3,6 +3,7 @@ const cors = require('cors');
 const { generateProof, verifyProof, poseidonHash, normalizeSecret, initPoseidon } = require('../zkp/zkp');
 const { getDevice, upsertDevice, updateDeviceStatus, initDb, markLastSeen } = require('./db');
 const { getContract } = require('./contract');
+const { signJwt } = require('../shared/jwt');
 require('dotenv').config();
 
 const app = express();
@@ -11,11 +12,28 @@ const PORT = process.env.PORT || 3001;
 const PROVIDER_URL = process.env.PROVIDER_URL || 'http://127.0.0.1:8545';
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '';
 const AUTH_DB_PATH = process.env.AUTH_DB_PATH;
+const JWT_SECRET = process.env.JWT_SECRET || 'local_dev_jwt_secret_change_me';
+const JWT_ISSUER = process.env.JWT_ISSUER || 'authchainid-auth-service';
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'authchainid-gateway';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
 app.use(cors());
 app.use(express.json());
 
 const contract = getContract({ providerUrl: PROVIDER_URL, contractAddress: CONTRACT_ADDRESS });
+
+const issueDeviceToken = (deviceId) =>
+    signJwt({
+        secret: JWT_SECRET,
+        subject: deviceId,
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+        expiresIn: JWT_EXPIRES_IN,
+        claims: {
+            deviceId,
+            scope: ['telemetry:write']
+        }
+    });
 
 app.post('/register', async (req, res) => {
     const { deviceId, secret } = req.body;
@@ -74,7 +92,8 @@ app.post('/verify', async (req, res) => {
     if (contract) {
         await contract.logAuth(deviceId, true, 'OK');
     }
-    res.json({ success: true, token: 'mock_jwt_token' });
+    const token = issueDeviceToken(deviceId);
+    res.json({ success: true, token, tokenType: 'Bearer', expiresIn: JWT_EXPIRES_IN });
 });
 
 app.post('/prove', async (req, res) => {
@@ -108,6 +127,15 @@ app.post('/revoke', async (req, res) => {
     }
 
     res.json({ success: true, status: 'REVOKED' });
+});
+
+app.get('/devices/:deviceId/status', async (req, res) => {
+    const { deviceId } = req.params;
+    const device = await getDevice(deviceId);
+    if (!device) {
+        return res.status(404).json({ error: 'Device not found' });
+    }
+    res.json({ deviceId, status: device.status, updatedAt: device.updatedAt, lastSeenAt: device.lastSeenAt });
 });
 
 app.get('/health', async (_req, res) => {

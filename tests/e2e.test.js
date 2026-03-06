@@ -6,9 +6,16 @@ const os = require('node:os');
 const fs = require('node:fs');
 
 const repoRoot = path.resolve(__dirname, '..');
+const JWT_SECRET = 'test_jwt_secret_please_change';
+const JWT_ISSUER = 'authchainid-auth-service';
+const JWT_AUDIENCE = 'authchainid-gateway';
 
 const spawnProcess = (command, args, options = {}) => {
-  const child = spawn(command, args, { stdio: 'pipe', ...options });
+  const child = spawn(command, args, {
+    stdio: 'pipe',
+    shell: process.platform === 'win32',
+    ...options
+  });
   child.stdout.on('data', () => {});
   child.stderr.on('data', () => {});
   return child;
@@ -84,6 +91,10 @@ before(async () => {
       PROVIDER_URL: 'http://127.0.0.1:8545',
       CONTRACT_ADDRESS: contractAddress,
       PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+      JWT_SECRET,
+      JWT_ISSUER,
+      JWT_AUDIENCE,
+      JWT_EXPIRES_IN: '15m',
       PORT: '3001'
     }
   });
@@ -95,7 +106,15 @@ before(async () => {
 
   gateway = spawnProcess('node', ['gateway/index.js'], {
     cwd: repoRoot,
-    env: { ...process.env, PORT: '3000', AUTH_SERVICE_URL: 'http://localhost:3001', BEHAVIOR_SERVICE_URL: 'http://localhost:8000' }
+    env: {
+      ...process.env,
+      PORT: '3000',
+      AUTH_SERVICE_URL: 'http://localhost:3001',
+      BEHAVIOR_SERVICE_URL: 'http://localhost:8000',
+      JWT_SECRET,
+      JWT_ISSUER,
+      JWT_AUDIENCE
+    }
   });
 
   await waitForHealth('http://localhost:3001/health');
@@ -144,10 +163,18 @@ test('end-to-end auth + telemetry + revoke', async () => {
   const authData = await authRes.json();
   assert.equal(authRes.status, 200);
   assert.ok(authData.token);
+  assert.equal(authData.token.split('.').length, 3);
+
+  const telemetryNoToken = await fetch('http://localhost:3000/telemetry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId, payloadSize: 50, metricValue: 12.5 })
+  });
+  assert.equal(telemetryNoToken.status, 401);
 
   const telemetryOk = await fetch('http://localhost:3000/telemetry', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authData.token}` },
     body: JSON.stringify({ deviceId, payloadSize: 50, metricValue: 12.5 })
   });
   const telemetryOkData = await telemetryOk.json();
@@ -156,7 +183,7 @@ test('end-to-end auth + telemetry + revoke', async () => {
 
   const telemetryBad = await fetch('http://localhost:3000/telemetry', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authData.token}` },
     body: JSON.stringify({ deviceId, payloadSize: 2000, metricValue: 12.5 })
   });
   const telemetryBadData = await telemetryBad.json();

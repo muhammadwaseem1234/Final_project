@@ -8,6 +8,10 @@ const webUiDir = path.join(repoRoot, "web-ui");
 const HARDHAT_RPC = "http://127.0.0.1:8545";
 const DEFAULT_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const DEFAULT_JWT_SECRET = "local_dev_jwt_secret_change_me";
+const DEFAULT_JWT_ISSUER = "authchainid-auth-service";
+const DEFAULT_JWT_AUDIENCE = "authchainid-gateway";
+const DEFAULT_JWT_EXPIRES_IN = "15m";
 
 const processes = [];
 
@@ -90,13 +94,25 @@ const main = async () => {
     PRIVATE_KEY: process.env.PRIVATE_KEY || DEFAULT_PRIVATE_KEY,
     CONTRACT_ADDRESS: contractAddress,
     PROVIDER_URL: HARDHAT_RPC,
+    JWT_SECRET: process.env.JWT_SECRET || DEFAULT_JWT_SECRET,
+    JWT_ISSUER: process.env.JWT_ISSUER || DEFAULT_JWT_ISSUER,
+    JWT_AUDIENCE: process.env.JWT_AUDIENCE || DEFAULT_JWT_AUDIENCE,
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || DEFAULT_JWT_EXPIRES_IN,
   };
 
   spawnProc("node", ["auth-service/index.js"], { cwd: repoRoot, env });
+  const gatewayEnv = {
+    ...process.env,
+    JWT_SECRET: env.JWT_SECRET,
+    JWT_ISSUER: env.JWT_ISSUER,
+    JWT_AUDIENCE: env.JWT_AUDIENCE,
+    AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL || "http://localhost:3001",
+    BEHAVIOR_SERVICE_URL: process.env.BEHAVIOR_SERVICE_URL || "http://localhost:8000",
+  };
   spawnProc(process.env.PYTHON || "python", ["behavior-service/main.py"], {
     cwd: repoRoot,
   });
-  spawnProc("node", ["gateway/index.js"], { cwd: repoRoot });
+  spawnProc("node", ["gateway/index.js"], { cwd: repoRoot, env: gatewayEnv });
   spawnProc("npm", ["run", "dev"], { cwd: webUiDir });
 };
 
